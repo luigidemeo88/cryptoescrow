@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -977,16 +977,29 @@
 
         window.app = app;
         
-        // Wait for page to fully load AND for wallet providers to inject
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log('DOM loaded, waiting for wallet injection...');
+        // Wait for ethers.js to load
+        function initWhenReady() {
+            if (typeof ethers === 'undefined') {
+                console.log('Waiting for ethers.js to load...');
+                setTimeout(initWhenReady, 100);
+                return;
+            }
+            
+            console.log('ethers.js loaded successfully!');
+            
+            // Wait for page to fully load AND for wallet providers to inject
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    console.log('DOM loaded, waiting for wallet injection...');
+                    setTimeout(() => app.init(), 1000);
+                });
+            } else {
+                console.log('DOM already loaded, waiting for wallet injection...');
                 setTimeout(() => app.init(), 1000);
-            });
-        } else {
-            console.log('DOM already loaded, waiting for wallet injection...');
-            setTimeout(() => app.init(), 1000);
+            }
         }
+        
+        initWhenReady();
         
         // Add refresh detection function
         window.refreshWalletDetection = function() {
