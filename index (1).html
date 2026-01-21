@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustSwap • Simple Crypto Escrow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 20px 0;
+            margin-bottom: 40px;
+        }
+
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        .wallet-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .network-badge {
+            padding: 6px 12px;
+            background: #eff6ff;
+            color: #2563eb;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #2563eb;
+            border: 1px solid #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            background: #f9fafb;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 6px;
+        }
+
+        .exchange-section {
+            padding: 24px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .exchange-divider {
+            text-align: center;
+            margin: 24px 0;
+            color: #6b7280;
+            font-size: 1.5rem;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 0.875rem;
+            color: #1e40af;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #1e3a8a;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #6b7280;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            bottom: -1px;
+        }
+
+        .tab:hover {
+            color: #2563eb;
+        }
+
+        .tab.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.visible {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 440px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .wallet-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .wallet-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .wallet-option:hover {
+            background: #eff6ff;
+            border-color: #2563eb;
+        }
+
+        .wallet-icon {
+            font-size: 2rem;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wallet-info-text {
+            flex: 1;
+        }
+
+        .wallet-name {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .wallet-desc {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .empty-text {
+            color: #6b7280;
+            margin-bottom: 24px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            min-width: 320px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .notification.success { border-left: 4px solid #10b981; }
+        .notification.error { border-left: 4px solid #ef4444; }
+        .notification.warning { border-left: 4px solid #f59e0b; }
+
+        .notification-header {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 0.875rem;
+        }
+
+        .notification-message {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .wallet-info {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            .tab {
+                white-space: nowrap;
+            }
+
+            .notification {
+                min-width: auto;
+                width: calc(100% - 40px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">🔐 TrustSwap</div>
+            <div class="wallet-info">
+                <div class="network-badge" id="networkBadge">
+                    <span id="networkName">Not Connected</span>
+                </div>
+                <button class="btn" id="connectWalletBtn" onclick="app.showWalletModal()">
+                    Connect Wallet
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="app.switchTab('create')">Create Deal</button>
+            <button class="tab" onclick="app.switchTab('marketplace')">Marketplace</button>
+            <button class="tab" onclick="app.switchTab('myDeals')">My Deals</button>
+        </div>
+
+        <div class="tab-content active" id="create">
+            <div class="card">
+                <h1 class="card-title">Create Escrow Deal</h1>
+                <p class="card-subtitle">Set up a trustless peer-to-peer swap. Both parties deposit, swap executes automatically.</p>
+                
+                <div class="form-group">
+                    <label class="form-label">Trading Partner Address</label>
+                    <input type="text" class="form-input" id="partyBAddress" placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb">
+                    <div class="form-hint">Ethereum address of the person you're trading with</div>
+                </div>
+
+                <div class="exchange-section">
+                    <div class="section-header">💰 You Send</div>
+                    <div class="form-group">
+                        <label class="form-label">Token Address</label>
+                        <input type="text" class="form-input" id="tokenAAddress" placeholder="0x0000000000000000000000000000000000000000">
+                        <div class="form-hint">Use 0x0000000000000000000000000000000000000000 for ETH</div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Amount</label>
+                        <input type="text" class="form-input" id="amountA" placeholder="1.5">
+                    </div>
+                </div>
+
+                <div class="exchange-divider">⇅</div>
+
+                <div class="exchange-section">
+                    <div class="section-header">💎 You Receive</div>
+                    <div class="form-group">
+                        <label class="form-label">Token Address</label>
+                        <input type="text" class="form-input" id="tokenBAddress" placeholder="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48">
+                        <div class="form-hint">Token address the other party will send</div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Amount</label>
+                        <input type="text" class="form-input" id="amountB" placeholder="3000">
+                    </div>
+                </div>
+
+                <button class="btn" style="width: 100%; margin-top: 24px;" onclick="app.createDeal()" id="createDealBtn">
+                    Create Deal
+                </button>
+
+                <div class="info-box" style="margin-top: 24px;">
+                    <strong>How it works:</strong>
+                    1. You create the deal and deposit your asset<br>
+                    2. Your trading partner deposits their asset<br>
+                    3. Swap executes automatically — completely trustless<br>
+                    4. Deal expires after 24 hours if not completed
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="marketplace">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Deals</div>
+                    <div class="stat-value" id="totalDeals">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active</div>
+                    <div class="stat-value" id="activeDeals">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-value" id="completedDeals">0</div>
+                </div>
+            </div>
+
+            <div id="marketplaceDeals"></div>
+
+            <div class="empty-state" id="marketplaceEmpty">
+                <div class="empty-icon">🔍</div>
+                <div class="empty-title">No Active Deals</div>
+                <div class="empty-text">Be the first to create a trustless swap</div>
+                <button class="btn" onclick="app.switchTab('create')">Create Deal</button>
+            </div>
+        </div>
+
+        <div class="tab-content" id="myDeals">
+            <div id="myDealsContent"></div>
+            <div class="empty-state" id="myDealsEmpty">
+                <div class="empty-icon">💼</div>
+                <div class="empty-title">No Deals Yet</div>
+                <div class="empty-text">Connect your wallet to see your deals</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="walletModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Connect Wallet</h2>
+            <div class="wallet-options">
+                <div class="wallet-option" onclick="app.connectCore()">
+                    <div class="wallet-icon">⚡</div>
+                    <div class="wallet-info-text">
+                        <div class="wallet-name">Core Wallet</div>
+                        <div class="wallet-desc">Core browser extension</div>
+                    </div>
+                </div>
+
+                <div class="wallet-option" onclick="app.connectMetaMask()">
+                    <div class="wallet-icon">🦊</div>
+                    <div class="wallet-info-text">
+                        <div class="wallet-name">MetaMask</div>
+                        <div class="wallet-desc">Browser extension</div>
+                    </div>
+                </div>
+
+                <div class="wallet-option" onclick="app.connectWalletConnect()">
+                    <div class="wallet-icon">📱</div>
+                    <div class="wallet-info-text">
+                        <div class="wallet-name">WalletConnect</div>
+                        <div class="wallet-desc">Mobile: Trust, Rainbow, 300+ wallets</div>
+                    </div>
+                </div>
+
+                <div class="wallet-option" onclick="app.connectInjected()">
+                    <div class="wallet-icon">💎</div>
+                    <div class="wallet-info-text">
+                        <div class="wallet-name">Other Wallets</div>
+                        <div class="wallet-desc">Rabby, Coinbase, Frame</div>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 16px;" onclick="app.closeWalletModal()">
+                Cancel
+            </button>
+            <button class="btn" style="width: 100%; margin-top: 8px; font-size: 0.75rem;" onclick="refreshWalletDetection(); app.showNotification('Refreshed wallet detection', 'success');">
+                🔄 Refresh Wallet Detection
+            </button>
+        </div>
+    </div>
+
+    <div id="notificationContainer"></div>
+
+    <script>
+        const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
+        const CONTRACT_ABI = [
+            "function createDeal(address _partyB, address _tokenA, uint256 _amountA, address _tokenB, uint256 _amountB) external payable returns (uint256)",
+            "function deposit(uint256 _dealId) external payable",
+            "function cancelDeal(uint256 _dealId) external",
+            "function getDeal(uint256 _dealId) external view returns (address, address, address, uint256, address, uint256, bool, bool, bool, bool, uint256)",
+            "function dealCounter() external view returns (uint256)"
+        ];
+
+        const app = {
+            provider: null,
+            signer: null,
+            contract: null,
+            userAddress: null,
+            walletConnectProvider: null,
+            connectionType: null,
+
+            async init() {
+                console.log('TrustSwap initialized');
+                
+                // Debug: Check which wallet providers are available
+                console.log('=== Wallet Detection ===');
+                console.log('window.ethereum:', typeof window.ethereum !== 'undefined' ? '✓ Found' : '✗ Not found');
+                console.log('window.avalanche:', typeof window.avalanche !== 'undefined' ? '✓ Found' : '✗ Not found');
+                console.log('window.coinbaseWalletExtension:', typeof window.coinbaseWalletExtension !== 'undefined' ? '✓ Found' : '✗ Not found');
+                console.log('WalletConnect:', typeof WalletConnectProvider !== 'undefined' ? '✓ Loaded' : '✗ Not loaded');
+                
+                // Check all properties on window that might be wallet providers
+                console.log('\n=== Scanning for wallet providers ===');
+                const walletKeys = Object.keys(window).filter(key => 
+                    key.toLowerCase().includes('wallet') || 
+                    key.toLowerCase().includes('ethereum') ||
+                    key.toLowerCase().includes('avalanche') ||
+                    key.toLowerCase().includes('core')
+                );
+                console.log('Potential wallet providers found:', walletKeys);
+                walletKeys.forEach(key => {
+                    console.log(`  - window.${key}:`, typeof window[key]);
+                });
+                
+                if (window.ethereum) {
+                    console.log('\n=== window.ethereum details ===');
+                    console.log('isMetaMask:', window.ethereum.isMetaMask);
+                    console.log('isCoinbaseWallet:', window.ethereum.isCoinbaseWallet);
+                    console.log('isRabby:', window.ethereum.isRabby);
+                    console.log('isAvalanche:', window.ethereum.isAvalanche);
+                    console.log('All properties:', Object.keys(window.ethereum));
+                }
+                console.log('=====================\n');
+                
+                await this.checkExistingConnection();
+            },
+
+            async checkExistingConnection() {
+                if (typeof window.ethereum !== 'undefined') {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        await this.connectMetaMask();
+                    }
+                }
+            },
+
+            showWalletModal() {
+                // Debug: Log all available wallet providers
+                console.log('=== Wallet Detection Debug ===');
+                console.log('window.ethereum:', !!window.ethereum);
+                console.log('window.avalanche:', !!window.avalanche);
+                console.log('window.ethereum.isMetaMask:', window.ethereum?.isMetaMask);
+                console.log('window.ethereum.isRabby:', window.ethereum?.isRabby);
+                console.log('window.ethereum.isCoinbaseWallet:', window.ethereum?.isCoinbaseWallet);
+                console.log('window.ethereum.isAvalanche:', window.ethereum?.isAvalanche);
+                console.log('window.coinbaseWalletExtension:', !!window.coinbaseWalletExtension);
+                console.log('============================');
+                
+                document.getElementById('walletModal').classList.add('visible');
+            },
+
+            closeWalletModal() {
+                document.getElementById('walletModal').classList.remove('visible');
+            },
+
+            async connectCore() {
+                try {
+                    console.log('=== Core Wallet Connection Attempt ===');
+                    
+                    // Wait a bit for Core to inject its provider
+                    let attempts = 0;
+                    const maxAttempts = 5;
+                    
+                    while (typeof window.avalanche === 'undefined' && attempts < maxAttempts) {
+                        console.log(`Waiting for Core wallet... attempt ${attempts + 1}/${maxAttempts}`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        attempts++;
+                    }
+                    
+                    console.log('window.avalanche exists?', typeof window.avalanche !== 'undefined');
+                    console.log('window.ethereum exists?', typeof window.ethereum !== 'undefined');
+                    
+                    // Try window.avalanche first (Core's preferred provider)
+                    if (typeof window.avalanche !== 'undefined') {
+                        console.log('Core wallet detected via window.avalanche!');
+                        const accounts = await window.avalanche.request({ method: 'eth_requestAccounts' });
+                        console.log('Accounts received:', accounts);
+                        
+                        this.provider = new ethers.providers.Web3Provider(window.avalanche);
+                        this.signer = this.provider.getSigner();
+                        this.userAddress = await this.signer.getAddress();
+                        this.connectionType = 'core';
+                        
+                        console.log('Core wallet connected successfully:', this.userAddress);
+                        
+                        await this.onWalletConnected();
+                        this.closeWalletModal();
+                        return;
+                    }
+                    
+                    // Try window.ethereum as fallback (Core also works through this)
+                    if (typeof window.ethereum !== 'undefined') {
+                        console.log('Trying to connect via window.ethereum (Core may use this)...');
+                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        console.log('Accounts received:', accounts);
+                        
+                        this.provider = new ethers.providers.Web3Provider(window.ethereum);
+                        this.signer = this.provider.getSigner();
+                        this.userAddress = await this.signer.getAddress();
+                        this.connectionType = 'core';
+                        
+                        console.log('Connected via ethereum provider:', this.userAddress);
+                        
+                        await this.onWalletConnected();
+                        this.closeWalletModal();
+                        return;
+                    }
+                    
+                    // No provider found
+                    console.log('Core wallet NOT detected');
+                    this.showNotification('Core wallet not detected. Please make sure Core extension is installed and enabled.', 'error');
+
+                } catch (error) {
+                    console.error('Core connection error:', error);
+                    this.showNotification('Failed to connect Core: ' + error.message, 'error');
+                }
+            },
+
+            async connectMetaMask() {
+                try {
+                    console.log('=== MetaMask Connection Attempt ===');
+                    console.log('window.ethereum exists?', typeof window.ethereum !== 'undefined');
+                    
+                    if (typeof window.ethereum === 'undefined') {
+                        console.log('MetaMask/Ethereum provider NOT detected');
+                        this.showNotification('MetaMask not detected. Please install MetaMask or use another wallet.', 'error');
+                        return;
+                    }
+
+                    console.log('Ethereum provider detected! Requesting accounts...');
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    console.log('Accounts received:', accounts);
+                    
+                    this.provider = new ethers.providers.Web3Provider(window.ethereum);
+                    this.signer = this.provider.getSigner();
+                    this.userAddress = await this.signer.getAddress();
+                    this.connectionType = 'metamask';
+                    
+                    console.log('MetaMask connected successfully:', this.userAddress);
+                    
+                    await this.onWalletConnected();
+                    this.closeWalletModal();
+
+                } catch (error) {
+                    console.error('MetaMask connection error:', error);
+                    this.showNotification('Failed to connect: ' + error.message, 'error');
+                }
+            },
+
+            async connectWalletConnect() {
+                try {
+                    this.showNotification('WalletConnect is disabled in this version. Please use Core wallet button or MetaMask.', 'warning');
+                    
+                    // Note: WalletConnect v1 is deprecated and causes connection issues
+                    // For mobile wallets, users should use the Core wallet button with Core mobile app
+                    
+                } catch (error) {
+                    console.error('WalletConnect error:', error);
+                    this.showNotification('WalletConnect unavailable: ' + error.message, 'error');
+                }
+            },
+
+            async connectInjected() {
+                try {
+                    // Check for Core wallet specifically
+                    if (window.avalanche) {
+                        console.log('Core wallet detected');
+                        await window.avalanche.request({ method: 'eth_requestAccounts' });
+                        this.provider = new ethers.providers.Web3Provider(window.avalanche);
+                        this.signer = this.provider.getSigner();
+                        this.userAddress = await this.signer.getAddress();
+                        this.connectionType = 'core';
+                        await this.onWalletConnected();
+                        this.closeWalletModal();
+                        return;
+                    }
+                    
+                    // Check for Coinbase wallet
+                    if (window.coinbaseWalletExtension) {
+                        console.log('Coinbase wallet detected');
+                        await window.coinbaseWalletExtension.request({ method: 'eth_requestAccounts' });
+                        this.provider = new ethers.providers.Web3Provider(window.coinbaseWalletExtension);
+                        this.signer = this.provider.getSigner();
+                        this.userAddress = await this.signer.getAddress();
+                        this.connectionType = 'coinbase';
+                        await this.onWalletConnected();
+                        this.closeWalletModal();
+                        return;
+                    }
+                    
+                    // Check for any Ethereum provider (Rabby, Frame, etc.)
+                    if (window.ethereum) {
+                        console.log('Ethereum provider detected');
+                        await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        this.provider = new ethers.providers.Web3Provider(window.ethereum);
+                        this.signer = this.provider.getSigner();
+                        this.userAddress = await this.signer.getAddress();
+                        this.connectionType = 'injected';
+                        await this.onWalletConnected();
+                        this.closeWalletModal();
+                        return;
+                    }
+                    
+                    throw new Error('No wallet detected. Please install Core, MetaMask, Rabby, or another wallet.');
+                    
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    this.showNotification('No wallet detected: ' + error.message, 'error');
+                }
+            },
+
+            async onWalletConnected() {
+                try {
+                    this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, this.signer);
+
+                    const shortAddress = `${this.userAddress.slice(0, 6)}...${this.userAddress.slice(-4)}`;
+                    document.getElementById('connectWalletBtn').textContent = shortAddress;
+                    
+                    const network = await this.provider.getNetwork();
+                    const networkNames = {
+                        1: 'Ethereum',
+                        5: 'Goerli',
+                        11155111: 'Sepolia',
+                        137: 'Polygon',
+                        42161: 'Arbitrum',
+                        10: 'Optimism'
+                    };
+                    document.getElementById('networkName').textContent = networkNames[network.chainId] || `Chain ${network.chainId}`;
+
+                    this.showNotification('Wallet connected!', 'success');
+                    await this.loadDeals();
+
+                } catch (error) {
+                    console.error('Error after connection:', error);
+                    this.showNotification('Error loading data', 'error');
+                }
+            },
+
+            async disconnect() {
+                if (this.walletConnectProvider) {
+                    await this.walletConnectProvider.disconnect();
+                }
+                this.provider = null;
+                this.signer = null;
+                this.contract = null;
+                this.userAddress = null;
+
+                document.getElementById('connectWalletBtn').textContent = 'Connect Wallet';
+                document.getElementById('networkName').textContent = 'Not Connected';
+            },
+
+            async loadDeals() {
+                try {
+                    if (!this.contract) return;
+
+                    const dealCount = await this.contract.dealCounter();
+                    document.getElementById('totalDeals').textContent = dealCount.toString();
+                    document.getElementById('activeDeals').textContent = '0';
+                    document.getElementById('completedDeals').textContent = '0';
+
+                } catch (error) {
+                    console.error('Error loading deals:', error);
+                }
+            },
+
+            async createDeal() {
+                try {
+                    if (!this.userAddress) {
+                        this.showNotification('Please connect your wallet first', 'error');
+                        this.showWalletModal();
+                        return;
+                    }
+
+                    const partyB = document.getElementById('partyBAddress').value.trim();
+                    const tokenA = document.getElementById('tokenAAddress').value.trim();
+                    const amountA = document.getElementById('amountA').value.trim();
+                    const tokenB = document.getElementById('tokenBAddress').value.trim();
+                    const amountB = document.getElementById('amountB').value.trim();
+
+                    if (!partyB || !ethers.utils.isAddress(partyB)) {
+                        throw new Error('Please enter a valid address');
+                    }
+                    if (!tokenA || !amountA || !tokenB || !amountB) {
+                        throw new Error('Please fill in all fields');
+                    }
+
+                    const parsedAmountA = ethers.utils.parseEther(amountA);
+                    const parsedAmountB = ethers.utils.parseEther(amountB);
+
+                    const normalizedTokenA = tokenA.toLowerCase() === '0x0' || tokenA.toLowerCase() === '0x0000000000000000000000000000000000000000' 
+                        ? ethers.constants.AddressZero : tokenA;
+                    const normalizedTokenB = tokenB.toLowerCase() === '0x0' || tokenB.toLowerCase() === '0x0000000000000000000000000000000000000000' 
+                        ? ethers.constants.AddressZero : tokenB;
+
+                    this.showNotification('Creating deal... Check your wallet', 'warning');
+                    
+                    const btn = document.getElementById('createDealBtn');
+                    btn.disabled = true;
+                    btn.textContent = 'Creating...';
+
+                    let tx;
+                    if (normalizedTokenA === ethers.constants.AddressZero) {
+                        tx = await this.contract.createDeal(
+                            partyB,
+                            ethers.constants.AddressZero,
+                            parsedAmountA,
+                            normalizedTokenB,
+                            parsedAmountB,
+                            { value: parsedAmountA }
+                        );
+                    } else {
+                        throw new Error('Token deals require approval — coming soon!');
+                    }
+
+                    this.showNotification('Transaction submitted...', 'warning');
+                    await tx.wait();
+                    
+                    this.showNotification('Deal created successfully! 🎉', 'success');
+                    
+                    document.getElementById('partyBAddress').value = '';
+                    document.getElementById('tokenAAddress').value = '';
+                    document.getElementById('amountA').value = '';
+                    document.getElementById('tokenBAddress').value = '';
+                    document.getElementById('amountB').value = '';
+                    
+                    btn.disabled = false;
+                    btn.textContent = 'Create Deal';
+                    
+                    await this.loadDeals();
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showNotification(error.message, 'error');
+                    
+                    const btn = document.getElementById('createDealBtn');
+                    btn.disabled = false;
+                    btn.textContent = 'Create Deal';
+                }
+            },
+
+            switchTab(tabName) {
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                document.getElementById(tabName).classList.add('active');
+                event.target.classList.add('active');
+            },
+
+            showNotification(message, type = 'success') {
+                const container = document.getElementById('notificationContainer');
+                
+                const icons = {
+                    success: '✓',
+                    error: '✕',
+                    warning: '⚠'
+                };
+                
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.innerHTML = `
+                    <div class="notification-header">${icons[type]} ${type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Notice'}</div>
+                    <div class="notification-message">${message}</div>
+                `;
+                
+                container.appendChild(notification);
+                setTimeout(() => notification.remove(), 5000);
+            }
+        };
+
+        window.app = app;
+        
+        // Wait for page to fully load AND for wallet providers to inject
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('DOM loaded, waiting for wallet injection...');
+                setTimeout(() => app.init(), 1000);
+            });
+        } else {
+            console.log('DOM already loaded, waiting for wallet injection...');
+            setTimeout(() => app.init(), 1000);
+        }
+        
+        // Add refresh detection function
+        window.refreshWalletDetection = function() {
+            console.log('Manually refreshing wallet detection...');
+            app.init();
+        };
+    </script>
+</body>
+</html>
